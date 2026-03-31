@@ -1,5 +1,53 @@
 # Skill Community Bot
 
-개발자 커뮤니티에서 `skill` 관련 글만 수집해서 전달해주는 봇을 설계하기 위한 프로젝트입니다.
+개발자 커뮤니티에서 `skill` 관련 글만 수집해서 Discord로 전달하는 봇
 
-현재 단계는 구현 전 **방향성 분석 + 설계 문서 작성**입니다.
+## 기능
+
+- DEV Community, Hacker News, GitHub Trending에서 글 수집
+- skill 관련 키워드 필터링
+- 중복 제거
+- Discord 알림 전송
+
+## 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+## 환경 변수 설정
+
+`.env` 파일 생성:
+
+```
+DISCORD_BOT_TOKEN=your_discord_bot_token
+DISCORD_CHANNEL_ID=your_channel_id
+```
+
+## 실행
+
+```bash
+python main.py
+```
+
+## 프로젝트 구조
+
+```
+.
+├── main.py              # 메인 실행 파일
+├── config.py            # 설정
+├── database.py          # SQLite 데이터베이스
+├── collectors/          # 커뮤니티 수집기
+│   ├── __init__.py
+│   ├── base.py
+│   ├── dev_community.py
+│   ├── hacker_news.py
+│   └── github_trending.py
+├── filters/             # 필터링 로직
+│   ├── __init__.py
+│   └── keyword_filter.py
+├── notifier/            # 알림
+│   ├── __init__.py
+│   └── discord_bot.py
+└── requirements.txt
+```
