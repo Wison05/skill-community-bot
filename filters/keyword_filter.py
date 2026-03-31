@@ -8,7 +8,7 @@ class KeywordFilter:
         self,
         skill_keywords: List[str] = None,
         related_keywords: List[str] = None,
-        min_score: float = 3.0,
+        min_score: float = 1.5,
     ):
         self.skill_keywords = [k.lower() for k in (skill_keywords or SKILL_KEYWORDS)]
         self.related_keywords = [k.lower() for k in (related_keywords or RELATED_KEYWORDS)]

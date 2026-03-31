@@ -1,6 +1,7 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
 from config import (
     DISCORD_BOT_TOKEN,
@@ -18,6 +19,21 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def get_next_scheduled_time():
+    now = datetime.now()
+    scheduled_hours = [6, 12, 18, 24]
+    
+    for hour in scheduled_hours:
+        target = now.replace(hour=hour % 24, minute=0, second=0, microsecond=0)
+        if hour == 24:
+            target = target + timedelta(days=1)
+        if target > now:
+            return target
+    
+    target = now.replace(hour=6, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    return target
 
 
 class SkillCommunityBot:
@@ -53,26 +69,43 @@ class SkillCommunityBot:
             )
         return collectors
 
+    def _collect_with_timeout(self, collector, timeout=20):
+        try:
+            posts = collector.collect()
+            return posts
+        except Exception as e:
+            logger.error(f"Error collecting from {collector.source_name}: {e}")
+            return []
+
     async def collect_and_filter(self):
         logger.info("Starting collection cycle...")
 
         all_posts = []
-        for collector in self.collectors:
-            try:
-                logger.info(f"Collecting from {collector.source_name}...")
-                posts = collector.collect()
-                logger.info(f"Collected {len(posts)} posts from {collector.source_name}")
-                all_posts.extend(posts)
-            except Exception as e:
-                logger.error(f"Error collecting from {collector.source_name}: {e}")
+        
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {
+                executor.submit(self._collect_with_timeout, collector): collector
+                for collector in self.collectors
+            }
+            
+            for future in futures:
+                collector = futures[future]
+                try:
+                    posts = future.result(timeout=25)
+                    logger.info(f"Collected {len(posts)} posts from {collector.source_name}")
+                    all_posts.extend(posts)
+                except FutureTimeoutError:
+                    logger.warning(f"Timeout collecting from {collector.source_name}")
+                except Exception as e:
+                    logger.error(f"Error collecting from {collector.source_name}: {e}")
 
         if not all_posts:
             logger.info("No posts collected")
             return 0
 
-        time_filter = TimeFilter(days=7)
+        time_filter = TimeFilter(days=14)
         recent_posts = time_filter.filter_by_time(all_posts)
-        logger.info(f"After time filter (7 days): {len(recent_posts)} posts")
+        logger.info(f"After time filter (14 days): {len(recent_posts)} posts")
 
         deduplicator = Deduplicator()
         for existing_post in self.db.get_recent_posts(hours=48):
@@ -137,8 +170,11 @@ class SkillCommunityBot:
         await self.run_cycle()
 
         while self.running:
-            logger.info(f"Sleeping for {COLLECTION_INTERVAL_HOURS} hours...")
-            await asyncio.sleep(COLLECTION_INTERVAL_HOURS * 3600)
+            next_time = get_next_scheduled_time()
+            sleep_seconds = (next_time - datetime.now()).total_seconds()
+            
+            logger.info(f"Next collection at {next_time.strftime('%H:%M')} (sleeping {sleep_seconds/3600:.1f} hours)")
+            await asyncio.sleep(sleep_seconds)
 
             if self.running:
                 await self.run_cycle()
