@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
 from typing import List, Dict, Any
 from collectors.base import BaseCollector
 
@@ -23,6 +24,7 @@ class GitHubTrendingCollector(BaseCollector):
             soup = BeautifulSoup(response.text, "html.parser")
             articles = soup.find_all("article", class_="Box-row", limit=self.max_posts)
 
+            today = datetime.now().isoformat()
             posts = []
             for article in articles:
                 try:
@@ -53,7 +55,7 @@ class GitHubTrendingCollector(BaseCollector):
                         "url": url,
                         "summary": summary,
                         "tags": tags,
-                        "published_at": "",
+                        "published_at": today,
                     }
                     posts.append(post)
                 except Exception:

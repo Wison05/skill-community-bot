@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Tuple
+from datetime import datetime, timedelta
 from config import SKILL_KEYWORDS, RELATED_KEYWORDS
 
 
@@ -7,41 +8,44 @@ class KeywordFilter:
         self,
         skill_keywords: List[str] = None,
         related_keywords: List[str] = None,
+        min_score: float = 3.0,
     ):
         self.skill_keywords = [k.lower() for k in (skill_keywords or SKILL_KEYWORDS)]
         self.related_keywords = [k.lower() for k in (related_keywords or RELATED_KEYWORDS)]
+        self.min_score = min_score
 
     def check_relevance(self, post: Dict[str, Any]) -> Tuple[bool, float, List[str]]:
         title = post.get("title", "").lower()
         summary = post.get("summary", "").lower()
         tags = post.get("tags", "").lower()
 
-        text = f"{title} {summary} {tags}"
-
         matched_keywords = []
         score = 0.0
 
         for keyword in self.skill_keywords:
-            if keyword in text:
+            if keyword in title:
                 matched_keywords.append(keyword)
-                if keyword in title:
-                    score += 3.0
-                elif keyword in tags:
-                    score += 2.0
-                else:
-                    score += 1.0
+                score += 3.0
+            elif keyword in tags:
+                matched_keywords.append(keyword)
+                score += 2.0
+            elif keyword in summary:
+                matched_keywords.append(keyword)
+                score += 1.0
 
         for keyword in self.related_keywords:
-            if keyword in text:
+            if keyword in title:
                 matched_keywords.append(keyword)
-                if keyword in title:
-                    score += 1.5
-                elif keyword in tags:
-                    score += 1.0
-                else:
-                    score += 0.5
+                score += 1.0
+            elif keyword in tags:
+                matched_keywords.append(keyword)
+                score += 0.5
+            elif keyword in summary:
+                matched_keywords.append(keyword)
+                score += 0.3
 
-        is_relevant = score >= 2.0 or any(k in title for k in self.skill_keywords)
+        title_has_skill = any(k in title for k in self.skill_keywords)
+        is_relevant = score >= self.min_score or title_has_skill
 
         return is_relevant, score, matched_keywords
 
@@ -51,7 +55,7 @@ class KeywordFilter:
             is_relevant, score, matched = self.check_relevance(post)
             if is_relevant:
                 post["relevance_score"] = score
-                post["matched_keywords"] = ", ".join(matched)
+                post["matched_keywords"] = ", ".join(set(matched))
                 filtered.append(post)
         return filtered
 
@@ -86,3 +90,28 @@ class Deduplicator:
                 unique.append(post)
                 self.add(post)
         return unique
+
+
+class TimeFilter:
+    def __init__(self, days: int = 7):
+        self.days = days
+        self.cutoff_date = datetime.now() - timedelta(days=days)
+
+    def is_recent(self, post: Dict[str, Any]) -> bool:
+        published_at = post.get("published_at", "")
+        if not published_at:
+            return True
+
+        try:
+            if isinstance(published_at, str):
+                if published_at.endswith("Z"):
+                    published_at = published_at[:-1]
+                pub_date = datetime.fromisoformat(published_at)
+            else:
+                return True
+            return pub_date >= self.cutoff_date
+        except (ValueError, TypeError):
+            return True
+
+    def filter_by_time(self, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        return [post for post in posts if self.is_recent(post)]

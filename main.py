@@ -10,7 +10,7 @@ from config import (
 )
 from database import Database
 from collectors import DevCommunityCollector, HackerNewsCollector, GitHubTrendingCollector, RedditCollector, XCollector
-from filters import KeywordFilter, Deduplicator
+from filters import KeywordFilter, Deduplicator, TimeFilter
 from notifier import DiscordNotifier
 
 logging.basicConfig(
@@ -70,12 +70,19 @@ class SkillCommunityBot:
             logger.info("No posts collected")
             return 0
 
+        time_filter = TimeFilter(days=7)
+        recent_posts = time_filter.filter_by_time(all_posts)
+        logger.info(f"After time filter (7 days): {len(recent_posts)} posts")
+
         deduplicator = Deduplicator()
         for existing_post in self.db.get_recent_posts(hours=48):
             deduplicator.add(existing_post)
 
-        unique_posts = deduplicator.deduplicate(all_posts)
+        unique_posts = deduplicator.deduplicate(recent_posts)
+        logger.info(f"After deduplication: {len(unique_posts)} posts")
+        
         filtered_posts = self.filter.filter_posts(unique_posts)
+        logger.info(f"After keyword filter: {len(filtered_posts)} posts")
 
         new_count = 0
         for post in filtered_posts:

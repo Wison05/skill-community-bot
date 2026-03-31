@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 from typing import List, Dict, Any
 from collectors.base import BaseCollector
 
@@ -18,13 +19,18 @@ class HackerNewsCollector(BaseCollector):
             for story_id in top_ids[: self.max_posts]:
                 story = self._get_story(story_id)
                 if story:
+                    time_unix = story.get("time")
+                    published_at = ""
+                    if time_unix:
+                        published_at = datetime.fromtimestamp(time_unix).isoformat()
+
                     post = {
                         "source_name": self.source_name,
                         "title": story.get("title", ""),
                         "url": story.get("url", f"https://news.ycombinator.com/item?id={story_id}"),
                         "summary": "",
                         "tags": "",
-                        "published_at": "",
+                        "published_at": published_at,
                     }
                     posts.append(post)
 
