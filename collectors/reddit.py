@@ -44,6 +44,7 @@ class RedditCollector(BaseCollector):
                 continue
 
             post = {
+                "source_name": self.source_name,
                 "title": post_data.get("title", ""),
                 "url": f"https://reddit.com{post_data.get('permalink', '')}",
                 "summary": post_data.get("selftext", "")[:500],

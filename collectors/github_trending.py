@@ -48,6 +48,7 @@ class GitHubTrendingCollector(BaseCollector):
                     tags = lang_elem.get_text(strip=True) if lang_elem else ""
 
                     post = {
+                        "source_name": self.source_name,
                         "title": title,
                         "url": url,
                         "summary": summary,

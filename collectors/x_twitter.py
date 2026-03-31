@@ -63,6 +63,7 @@ class XCollector(BaseCollector):
                 username = username_elem.get_text(strip=True) if username_elem else "unknown"
                 
                 post = {
+                    "source_name": self.source_name,
                     "title": f"@{username}: {content[:100]}...",
                     "url": tweet_url.replace("nitter.net", "x.com"),
                     "summary": content[:500],

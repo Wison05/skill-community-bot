@@ -24,6 +24,7 @@ class DevCommunityCollector(BaseCollector):
             posts = []
             for article in articles:
                 post = {
+                    "source_name": self.source_name,
                     "title": article.get("title", ""),
                     "url": article.get("url", ""),
                     "summary": article.get("description", ""),

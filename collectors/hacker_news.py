@@ -19,6 +19,7 @@ class HackerNewsCollector(BaseCollector):
                 story = self._get_story(story_id)
                 if story:
                     post = {
+                        "source_name": self.source_name,
                         "title": story.get("title", ""),
                         "url": story.get("url", f"https://news.ycombinator.com/item?id={story_id}"),
                         "summary": "",
