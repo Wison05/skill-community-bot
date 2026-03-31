@@ -52,4 +52,15 @@ SOURCES = {
         "url": "https://github.com/trending",
         "max_posts": 10,
     },
+    "reddit": {
+        "enabled": True,
+        "url": "https://www.reddit.com",
+        "max_posts": 10,
+        "subreddits": ["programming", "webdev", "machinelearning", "artificial", "OpenAI", "ClaudeAI", "Python", "web_design"],
+    },
+    "x_twitter": {
+        "enabled": True,
+        "url": "https://x.com",
+        "max_posts": 8,
+    },
 }

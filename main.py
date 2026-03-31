@@ -9,7 +9,7 @@ from config import (
     SOURCES,
 )
 from database import Database
-from collectors import DevCommunityCollector, HackerNewsCollector, GitHubTrendingCollector
+from collectors import DevCommunityCollector, HackerNewsCollector, GitHubTrendingCollector, RedditCollector, XCollector
 from filters import KeywordFilter, Deduplicator
 from notifier import DiscordNotifier
 
@@ -41,6 +41,15 @@ class SkillCommunityBot:
         if SOURCES["github_trending"]["enabled"]:
             collectors.append(
                 GitHubTrendingCollector(SOURCES["github_trending"]["max_posts"])
+            )
+        if SOURCES["reddit"]["enabled"]:
+            subreddits = SOURCES["reddit"].get("subreddits", ["programming"])
+            collectors.append(
+                RedditCollector(SOURCES["reddit"]["max_posts"], subreddits)
+            )
+        if SOURCES["x_twitter"]["enabled"]:
+            collectors.append(
+                XCollector(SOURCES["x_twitter"]["max_posts"])
             )
         return collectors
 
