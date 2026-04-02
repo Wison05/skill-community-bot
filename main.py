@@ -23,16 +23,11 @@ logger = logging.getLogger(__name__)
 
 def get_next_scheduled_time():
     now = datetime.now()
-    scheduled_hours = [6, 12, 18, 24]
-    
-    for hour in scheduled_hours:
-        target = now.replace(hour=hour % 24, minute=0, second=0, microsecond=0)
-        if hour == 24:
-            target = target + timedelta(days=1)
-        if target > now:
-            return target
-    
-    target = now.replace(hour=6, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    # 30분 간격으로 스케줄링 (00분, 30분)
+    if now.minute < 30:
+        target = now.replace(minute=30, second=0, microsecond=0)
+    else:
+        target = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
     return target
 
 
