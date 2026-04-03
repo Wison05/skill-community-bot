@@ -10,7 +10,7 @@ from config import (
     SOURCES,
 )
 from database import Database
-from collectors import DevCommunityCollector, HackerNewsCollector, GitHubTrendingCollector, RedditCollector, XCollector
+from collectors import DevCommunityCollector, HackerNewsCollector, GitHubTrendingCollector, RedditCollector, XCollector, HadaNewsCollector
 from filters import KeywordFilter, Deduplicator, TimeFilter
 from notifier import DiscordNotifier
 
@@ -61,6 +61,10 @@ class SkillCommunityBot:
         if SOURCES["x_twitter"]["enabled"]:
             collectors.append(
                 XCollector(SOURCES["x_twitter"]["max_posts"])
+            )
+        if SOURCES["hada_news"]["enabled"]:
+            collectors.append(
+                HadaNewsCollector(SOURCES["hada_news"]["max_posts"])
             )
         return collectors
 

@@ -63,4 +63,9 @@ SOURCES = {
         "url": "https://x.com",
         "max_posts": 8,
     },
+    "hada_news": {
+        "enabled": True,
+        "url": "https://news.hada.io/rss/news",
+        "max_posts": 10,
+    },
 }
