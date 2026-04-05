@@ -44,9 +44,11 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_posts_url ON posts(url);
                 CREATE INDEX IF NOT EXISTS idx_posts_source ON posts(source_name);
                 CREATE INDEX IF NOT EXISTS idx_posts_sent ON posts(sent);
-                CREATE INDEX IF NOT EXISTS idx_posts_notification_status ON posts(notification_status);
             """)
             self._ensure_notification_columns(conn)
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_posts_notification_status ON posts(notification_status)"
+            )
             conn.execute(
                 """
                 UPDATE posts
