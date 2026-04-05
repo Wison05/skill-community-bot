@@ -20,6 +20,15 @@ class KeywordFilter:
         self.min_score = min_score
 
     @staticmethod
+    def _unique_keywords(keywords: List[str]) -> List[str]:
+        unique_keywords: List[str] = []
+        for keyword in keywords:
+            if keyword not in unique_keywords:
+                unique_keywords.append(keyword)
+
+        return unique_keywords
+
+    @staticmethod
     def _normalize_text(value: str) -> str:
         lowered = value.lower()
         normalized = re.sub(r"[^a-z0-9]+", " ", lowered)
@@ -56,13 +65,18 @@ class KeywordFilter:
                 matched_keywords.append(keyword)
                 score += 0.3
 
+        strong_title_matches = [
+            keyword for keyword in self.strong_title_keywords if keyword in normalized_title
+        ]
+        if strong_title_matches:
+            matched_keywords.extend(strong_title_matches)
+            score = max(score, self.min_score)
+
         title_has_skill = any(k in title for k in self.skill_keywords)
-        title_has_strong_related = any(
-            keyword in normalized_title for keyword in self.strong_title_keywords
-        )
+        title_has_strong_related = bool(strong_title_matches)
         is_relevant = score >= self.min_score or title_has_skill or title_has_strong_related
 
-        return is_relevant, score, matched_keywords
+        return is_relevant, score, self._unique_keywords(matched_keywords)
 
     def filter_posts(self, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         filtered = []
@@ -70,7 +84,7 @@ class KeywordFilter:
             is_relevant, score, matched = self.check_relevance(post)
             if is_relevant:
                 post["relevance_score"] = score
-                post["matched_keywords"] = ", ".join(set(matched))
+                post["matched_keywords"] = ", ".join(self._unique_keywords(matched))
                 filtered.append(post)
         return filtered
 

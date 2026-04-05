@@ -1,8 +1,12 @@
+import logging
 import sqlite3
 import os
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from config import DATABASE_PATH
+
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -30,14 +34,47 @@ class Database:
                     matched_keywords TEXT,
                     relevance_score REAL DEFAULT 0,
                     sent BOOLEAN DEFAULT 0,
+                    notification_status TEXT DEFAULT 'pending',
+                    notification_claimed_at TEXT,
+                    notification_error TEXT,
+                    discord_message_id TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_posts_url ON posts(url);
                 CREATE INDEX IF NOT EXISTS idx_posts_source ON posts(source_name);
                 CREATE INDEX IF NOT EXISTS idx_posts_sent ON posts(sent);
+                CREATE INDEX IF NOT EXISTS idx_posts_notification_status ON posts(notification_status);
             """)
+            self._ensure_notification_columns(conn)
+            conn.execute(
+                """
+                UPDATE posts
+                SET notification_status = CASE WHEN sent = 1 THEN 'sent' ELSE 'pending' END
+                WHERE notification_status IS NULL OR notification_status = ''
+                """
+            )
             conn.commit()
+
+    @staticmethod
+    def _ensure_notification_columns(conn: sqlite3.Connection):
+        existing_columns = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(posts)").fetchall()
+        }
+
+        column_definitions = {
+            "notification_status": "TEXT DEFAULT 'pending'",
+            "notification_claimed_at": "TEXT",
+            "notification_error": "TEXT",
+            "discord_message_id": "TEXT",
+        }
+
+        for column_name, column_definition in column_definitions.items():
+            if column_name not in existing_columns:
+                conn.execute(
+                    f"ALTER TABLE posts ADD COLUMN {column_name} {column_definition}"
+                )
 
     def save_post(
         self,
@@ -62,7 +99,8 @@ class Database:
                 )
                 conn.commit()
                 return conn.total_changes > 0
-        except sqlite3.Error:
+        except sqlite3.Error as error:
+            logger.error(f"Failed to save post {url}: {error}")
             return False
 
     def post_exists(self, url: str) -> bool:
@@ -75,7 +113,7 @@ class Database:
             cursor = conn.execute(
                 """
                 SELECT * FROM posts 
-                WHERE sent = 0 
+                WHERE notification_status IN ('pending', 'failed')
                 ORDER BY relevance_score DESC, created_at DESC
                 LIMIT ?
                 """,
@@ -83,13 +121,54 @@ class Database:
             )
             return [dict(row) for row in cursor.fetchall()]
 
-    def mark_as_sent(self, post_id: int):
+    def mark_as_sending(self, post_id: int) -> bool:
         with self.get_connection() as conn:
+            claimed_at = datetime.utcnow().isoformat()
             conn.execute(
-                "UPDATE posts SET sent = 1 WHERE id = ?",
-                (post_id,),
+                """
+                UPDATE posts
+                SET notification_status = 'sending',
+                    notification_claimed_at = ?,
+                    notification_error = NULL
+                WHERE id = ? AND notification_status IN ('pending', 'failed')
+                """,
+                (claimed_at, post_id),
             )
             conn.commit()
+            return conn.total_changes > 0
+
+    def mark_as_sent(self, post_id: int, discord_message_id: str) -> bool:
+        with self.get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE posts
+                SET sent = 1,
+                    notification_status = 'sent',
+                    notification_claimed_at = NULL,
+                    notification_error = NULL,
+                    discord_message_id = ?
+                WHERE id = ? AND notification_status = 'sending'
+                """,
+                (discord_message_id, post_id),
+            )
+            conn.commit()
+            return conn.total_changes > 0
+
+    def mark_as_failed(self, post_id: int, error_message: str) -> bool:
+        with self.get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE posts
+                SET sent = 0,
+                    notification_status = 'failed',
+                    notification_claimed_at = NULL,
+                    notification_error = ?
+                WHERE id = ? AND notification_status = 'sending'
+                """,
+                (error_message, post_id),
+            )
+            conn.commit()
+            return conn.total_changes > 0
 
     def get_recent_posts(self, hours: int = 24) -> List[Dict[str, Any]]:
         with self.get_connection() as conn:
@@ -106,9 +185,19 @@ class Database:
         with self.get_connection() as conn:
             total = conn.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
             sent = conn.execute("SELECT COUNT(*) FROM posts WHERE sent = 1").fetchone()[0]
-            unsent = conn.execute("SELECT COUNT(*) FROM posts WHERE sent = 0").fetchone()[0]
+            unsent = conn.execute(
+                "SELECT COUNT(*) FROM posts WHERE notification_status IN ('pending', 'failed')"
+            ).fetchone()[0]
+            sending = conn.execute(
+                "SELECT COUNT(*) FROM posts WHERE notification_status = 'sending'"
+            ).fetchone()[0]
+            failed = conn.execute(
+                "SELECT COUNT(*) FROM posts WHERE notification_status = 'failed'"
+            ).fetchone()[0]
             return {
                 "total": total,
                 "sent": sent,
                 "unsent": unsent,
+                "sending": sending,
+                "failed": failed,
             }

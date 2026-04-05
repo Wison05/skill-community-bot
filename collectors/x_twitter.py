@@ -1,5 +1,5 @@
 import requests
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 from collectors.base import BaseCollector
 
 
@@ -52,7 +52,11 @@ class XCollector(BaseCollector):
                 if not link_elem:
                     continue
                 
-                tweet_url = link_elem.get("href", "")
+                raw_tweet_url = link_elem.get("href", "")
+                tweet_url = raw_tweet_url if isinstance(raw_tweet_url, str) else ""
+                if not tweet_url:
+                    continue
+
                 if tweet_url.startswith("/"):
                     tweet_url = f"https://nitter.net{tweet_url}"
                 

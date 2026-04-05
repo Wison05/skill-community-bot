@@ -1,10 +1,10 @@
 import requests
-from typing import List, Dict, Any
+from typing import Any, Dict, List, Optional
 from collectors.base import BaseCollector
 
 
 class RedditCollector(BaseCollector):
-    def __init__(self, max_posts: int = 10, subreddits: List[str] = None):
+    def __init__(self, max_posts: int = 10, subreddits: Optional[List[str]] = None):
         super().__init__("Reddit", max_posts)
         self.subreddits = subreddits or ["programming", "webdev", "machinelearning", "artificial", "OpenAI", "ClaudeAI"]
         self.headers = {

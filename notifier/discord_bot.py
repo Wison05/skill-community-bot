@@ -1,6 +1,7 @@
 import discord
+from discord.abc import Messageable
 from discord.ext import commands
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 import asyncio
 
 
@@ -21,14 +22,17 @@ class DiscordNotifier:
     async def wait_until_ready(self):
         await self.ready_event.wait()
 
-    async def send_post(self, post: Dict[str, Any]):
+    async def send_post(self, post: Dict[str, Any]) -> Optional[str]:
         channel = self.bot.get_channel(self.channel_id)
-        if not channel:
-            return False
+        if channel is None:
+            channel = await self.bot.fetch_channel(self.channel_id)
+
+        if not isinstance(channel, Messageable):
+            return None
 
         embed = self._create_embed(post)
-        await channel.send(embed=embed)
-        return True
+        message = await channel.send(embed=embed)
+        return str(message.id)
 
     def _create_embed(self, post: Dict[str, Any]) -> discord.Embed:
         source = post.get("source_name", "Unknown")

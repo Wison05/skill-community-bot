@@ -1,15 +1,46 @@
 import os
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 from dotenv import load_dotenv
 
 _ = load_dotenv()
 
-DISCORD_BOT_TOKEN: str = os.getenv("DISCORD_BOT_TOKEN") or ""
-DISCORD_CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID", "0"))
 
-COLLECTION_INTERVAL_HOURS = int(os.getenv("COLLECTION_INTERVAL_HOURS", "6"))
-MAX_POSTS_PER_SOURCE = int(os.getenv("MAX_POSTS_PER_SOURCE", "10"))
+def _get_int_env(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+
+    return int(value)
+
+
+def _get_float_env(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if value is None:
+        return default
+
+    return float(value)
+
+
+def _get_optional_int_env(name: str) -> Optional[int]:
+    value = os.getenv(name)
+    if value is None:
+        return None
+
+    return int(value)
+
+
+def _source_max_posts(default: int) -> int:
+    if MAX_POSTS_PER_SOURCE is not None:
+        return MAX_POSTS_PER_SOURCE
+
+    return default
+
+DISCORD_BOT_TOKEN: str = os.getenv("DISCORD_BOT_TOKEN") or ""
+DISCORD_CHANNEL_ID = _get_int_env("DISCORD_CHANNEL_ID", 0)
+
+COLLECTION_INTERVAL_HOURS = _get_float_env("COLLECTION_INTERVAL_HOURS", 0.5)
+MAX_POSTS_PER_SOURCE = _get_optional_int_env("MAX_POSTS_PER_SOURCE")
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", "data/skill_bot.db")
 SKILL_KEYWORDS = [
@@ -42,7 +73,6 @@ STRONG_TITLE_KEYWORDS = [
     "adk agents",
     "adk agent",
     "agent framework",
-    "mcp",
     "model context protocol",
 ]
 
@@ -70,32 +100,32 @@ SOURCES: SourcesConfig = {
     "dev_community": {
         "enabled": True,
         "url": "https://dev.to/api/articles",
-        "max_posts": 10,
+        "max_posts": _source_max_posts(10),
     },
     "hacker_news": {
         "enabled": True,
         "url": "https://hacker-news.firebaseio.com/v0",
-        "max_posts": 10,
+        "max_posts": _source_max_posts(10),
     },
     "github_trending": {
         "enabled": True,
         "url": "https://github.com/trending",
-        "max_posts": 10,
+        "max_posts": _source_max_posts(10),
     },
     "reddit": {
         "enabled": True,
         "url": "https://www.reddit.com",
-        "max_posts": 10,
+        "max_posts": _source_max_posts(10),
         "subreddits": ["programming", "webdev", "machinelearning", "artificial", "OpenAI", "ClaudeAI", "Python", "web_design"],
     },
     "x_twitter": {
         "enabled": True,
         "url": "https://x.com",
-        "max_posts": 8,
+        "max_posts": _source_max_posts(8),
     },
     "hada_news": {
         "enabled": True,
         "url": "https://news.hada.io/rss/news",
-        "max_posts": 10,
+        "max_posts": _source_max_posts(10),
     },
 }

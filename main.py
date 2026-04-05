@@ -23,11 +23,12 @@ logger = logging.getLogger(__name__)
 
 def get_next_scheduled_time():
     now = datetime.now()
-    # 30분 간격으로 스케줄링 (00분, 30분)
-    if now.minute < 30:
-        target = now.replace(minute=30, second=0, microsecond=0)
-    else:
-        target = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    interval_minutes = max(1, int(COLLECTION_INTERVAL_HOURS * 60))
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elapsed_minutes = int((now - day_start).total_seconds() // 60)
+    next_slot_minutes = ((elapsed_minutes // interval_minutes) + 1) * interval_minutes
+    target = day_start + timedelta(minutes=next_slot_minutes)
+    target = target.replace(second=0, microsecond=0)
     return target
 
 
@@ -76,6 +77,18 @@ class SkillCommunityBot:
             logger.error(f"Error collecting from {collector.source_name}: {e}")
             return []
 
+    def _mark_notification_failed(self, post_id: int, error_message: str):
+        try:
+            was_marked_failed = self.db.mark_as_failed(post_id, error_message)
+            if not was_marked_failed:
+                logger.error(
+                    f"Failed to move post {post_id} into failed notification state"
+                )
+        except Exception as db_error:
+            logger.error(
+                f"Could not persist failed notification state for post {post_id}: {db_error}"
+            )
+
     async def collect_and_filter(self):
         logger.info("Starting collection cycle...")
 
@@ -118,18 +131,22 @@ class SkillCommunityBot:
 
         new_count = 0
         for post in filtered_posts:
-            if not self.db.post_exists(post["url"]):
-                self.db.save_post(
-                    source_name=post["source_name"],
-                    title=post["title"],
-                    url=post["url"],
-                    summary=post.get("summary", ""),
-                    tags=post.get("tags", ""),
-                    published_at=post.get("published_at", ""),
-                    matched_keywords=post.get("matched_keywords", ""),
-                    relevance_score=post.get("relevance_score", 0),
-                )
+            was_saved = self.db.save_post(
+                source_name=post["source_name"],
+                title=post["title"],
+                url=post["url"],
+                summary=post.get("summary", ""),
+                tags=post.get("tags", ""),
+                published_at=post.get("published_at", ""),
+                matched_keywords=post.get("matched_keywords", ""),
+                relevance_score=post.get("relevance_score", 0),
+            )
+            if was_saved:
                 new_count += 1
+            else:
+                logger.info(
+                    f"Post was not saved for source {post['source_name']}: {post['url']}"
+                )
 
         logger.info(f"Saved {new_count} new posts to database")
         return new_count
@@ -144,19 +161,44 @@ class SkillCommunityBot:
 
         sent_count = 0
         for post in unsent_posts:
+            post_id = post["id"]
+
             try:
-                was_sent = await self.notifier.send_post(post)
-                if not was_sent:
+                was_claimed = self.db.mark_as_sending(post_id)
+                if not was_claimed:
+                    logger.warning(f"Notification already claimed for post {post_id}")
+                    continue
+
+                discord_message_id = await self.notifier.send_post(post)
+                if not discord_message_id:
+                    self._mark_notification_failed(
+                        post_id,
+                        "Notifier did not return a Discord message id",
+                    )
                     logger.warning(
-                        f"Notification not sent for post {post['id']}; leaving it unsent"
+                        f"Notification not sent for post {post_id}; moving it to failed state"
                     )
                     continue
 
-                self.db.mark_as_sent(post["id"])
+            except Exception as e:
+                self._mark_notification_failed(post_id, str(e))
+                logger.error(f"Error sending notification for post {post_id}: {e}")
+                continue
+
+            try:
+                was_marked_sent = self.db.mark_as_sent(post_id, discord_message_id)
+                if not was_marked_sent:
+                    logger.error(
+                        f"Sent Discord message {discord_message_id} for post {post_id} but could not finalize DB state; leaving it in sending state"
+                    )
+                    continue
+
                 sent_count += 1
                 await asyncio.sleep(1)
             except Exception as e:
-                logger.error(f"Error sending notification for post {post['id']}: {e}")
+                logger.error(
+                    f"Sent Discord message {discord_message_id} for post {post_id} but failed to persist sent state: {e}"
+                )
 
         logger.info(f"Sent {sent_count} notifications")
         return sent_count
