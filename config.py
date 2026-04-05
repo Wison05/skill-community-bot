@@ -1,9 +1,11 @@
 import os
+from typing import TypedDict
+
 from dotenv import load_dotenv
 
-load_dotenv()
+_ = load_dotenv()
 
-DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+DISCORD_BOT_TOKEN: str = os.getenv("DISCORD_BOT_TOKEN") or ""
 DISCORD_CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID", "0"))
 
 COLLECTION_INTERVAL_HOURS = int(os.getenv("COLLECTION_INTERVAL_HOURS", "6"))
@@ -36,7 +38,35 @@ RELATED_KEYWORDS = [
     "model context protocol",
 ]
 
-SOURCES = {
+STRONG_TITLE_KEYWORDS = [
+    "adk agents",
+    "adk agent",
+    "agent framework",
+    "mcp",
+    "model context protocol",
+]
+
+
+class SourceConfig(TypedDict):
+    enabled: bool
+    url: str
+    max_posts: int
+
+
+class RedditSourceConfig(SourceConfig):
+    subreddits: list[str]
+
+
+class SourcesConfig(TypedDict):
+    dev_community: SourceConfig
+    hacker_news: SourceConfig
+    github_trending: SourceConfig
+    reddit: RedditSourceConfig
+    x_twitter: SourceConfig
+    hada_news: SourceConfig
+
+
+SOURCES: SourcesConfig = {
     "dev_community": {
         "enabled": True,
         "url": "https://dev.to/api/articles",

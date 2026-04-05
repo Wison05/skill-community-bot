@@ -1,23 +1,35 @@
-from typing import List, Dict, Any, Tuple
+import re
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
-from config import SKILL_KEYWORDS, RELATED_KEYWORDS
+from config import SKILL_KEYWORDS, RELATED_KEYWORDS, STRONG_TITLE_KEYWORDS
 
 
 class KeywordFilter:
     def __init__(
         self,
-        skill_keywords: List[str] = None,
-        related_keywords: List[str] = None,
+        skill_keywords: Optional[List[str]] = None,
+        related_keywords: Optional[List[str]] = None,
+        strong_title_keywords: Optional[List[str]] = None,
         min_score: float = 1.5,
     ):
         self.skill_keywords = [k.lower() for k in (skill_keywords or SKILL_KEYWORDS)]
         self.related_keywords = [k.lower() for k in (related_keywords or RELATED_KEYWORDS)]
+        self.strong_title_keywords = [
+            self._normalize_text(k) for k in (strong_title_keywords or STRONG_TITLE_KEYWORDS)
+        ]
         self.min_score = min_score
+
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        lowered = value.lower()
+        normalized = re.sub(r"[^a-z0-9]+", " ", lowered)
+        return " ".join(normalized.split())
 
     def check_relevance(self, post: Dict[str, Any]) -> Tuple[bool, float, List[str]]:
         title = post.get("title", "").lower()
         summary = post.get("summary", "").lower()
         tags = post.get("tags", "").lower()
+        normalized_title = self._normalize_text(post.get("title", ""))
 
         matched_keywords = []
         score = 0.0
@@ -45,7 +57,10 @@ class KeywordFilter:
                 score += 0.3
 
         title_has_skill = any(k in title for k in self.skill_keywords)
-        is_relevant = score >= self.min_score or title_has_skill
+        title_has_strong_related = any(
+            keyword in normalized_title for keyword in self.strong_title_keywords
+        )
+        is_relevant = score >= self.min_score or title_has_skill or title_has_strong_related
 
         return is_relevant, score, matched_keywords
 

@@ -145,7 +145,13 @@ class SkillCommunityBot:
         sent_count = 0
         for post in unsent_posts:
             try:
-                await self.notifier.send_post(post)
+                was_sent = await self.notifier.send_post(post)
+                if not was_sent:
+                    logger.warning(
+                        f"Notification not sent for post {post['id']}; leaving it unsent"
+                    )
+                    continue
+
                 self.db.mark_as_sent(post["id"])
                 sent_count += 1
                 await asyncio.sleep(1)
