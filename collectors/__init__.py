@@ -3,7 +3,6 @@ from .dev_community import DevCommunityCollector
 from .hacker_news import HackerNewsCollector
 from .github_trending import GitHubTrendingCollector
 from .reddit import RedditCollector
-from .x_twitter import XCollector
 from .hada_news import HadaNewsCollector
 
 __all__ = [
@@ -12,6 +11,5 @@ __all__ = [
     "HackerNewsCollector",
     "GitHubTrendingCollector",
     "RedditCollector",
-    "XCollector",
     "HadaNewsCollector",
 ]

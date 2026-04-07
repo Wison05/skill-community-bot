@@ -4,7 +4,7 @@
 
 ## 기능
 
-- DEV Community, Hacker News, GitHub Trending에서 글 수집
+- DEV Community, Hacker News, GitHub Trending, Reddit에서 글 수집
 - skill 관련 키워드 필터링
 - 중복 제거
 - Discord 알림 전송
@@ -22,7 +22,11 @@ pip install -r requirements.txt
 ```
 DISCORD_BOT_TOKEN=your_discord_bot_token
 DISCORD_CHANNEL_ID=your_channel_id
+
+REDDIT_USER_AGENT=SkillCommunityBot/1.0
 ```
+
+`REDDIT_USER_AGENT`만 있으면 public subreddit JSON endpoint를 읽을 수 있습니다.
 
 ## 실행
 
@@ -42,7 +46,9 @@ python main.py
 │   ├── base.py
 │   ├── dev_community.py
 │   ├── hacker_news.py
-│   └── github_trending.py
+│   ├── github_trending.py
+│   ├── reddit.py
+│   └── hada_news.py
 ├── filters/             # 필터링 로직
 │   ├── __init__.py
 │   └── keyword_filter.py

@@ -39,6 +39,8 @@ def _source_max_posts(default: int) -> int:
 DISCORD_BOT_TOKEN: str = os.getenv("DISCORD_BOT_TOKEN") or ""
 DISCORD_CHANNEL_ID = _get_int_env("DISCORD_CHANNEL_ID", 0)
 
+REDDIT_USER_AGENT: str = os.getenv("REDDIT_USER_AGENT") or "SkillCommunityBot/1.0"
+
 COLLECTION_INTERVAL_HOURS = _get_float_env("COLLECTION_INTERVAL_HOURS", 0.5)
 MAX_POSTS_PER_SOURCE = _get_optional_int_env("MAX_POSTS_PER_SOURCE")
 
@@ -92,7 +94,6 @@ class SourcesConfig(TypedDict):
     hacker_news: SourceConfig
     github_trending: SourceConfig
     reddit: RedditSourceConfig
-    x_twitter: SourceConfig
     hada_news: SourceConfig
 
 
@@ -117,11 +118,6 @@ SOURCES: SourcesConfig = {
         "url": "https://www.reddit.com",
         "max_posts": _source_max_posts(10),
         "subreddits": ["programming", "webdev", "machinelearning", "artificial", "OpenAI", "ClaudeAI", "Python", "web_design"],
-    },
-    "x_twitter": {
-        "enabled": True,
-        "url": "https://x.com",
-        "max_posts": _source_max_posts(8),
     },
     "hada_news": {
         "enabled": True,
