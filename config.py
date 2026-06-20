@@ -95,6 +95,7 @@ class SourcesConfig(TypedDict):
     github_trending: SourceConfig
     reddit: RedditSourceConfig
     hada_news: SourceConfig
+    pytorch_blog: SourceConfig
 
 
 SOURCES: SourcesConfig = {
@@ -122,6 +123,11 @@ SOURCES: SourcesConfig = {
     "hada_news": {
         "enabled": True,
         "url": "https://news.hada.io/rss/news",
+        "max_posts": _source_max_posts(10),
+    },
+    "pytorch_blog": {
+        "enabled": True,
+        "url": "https://pytorch.org/blog/feed/",
         "max_posts": _source_max_posts(10),
     },
 }

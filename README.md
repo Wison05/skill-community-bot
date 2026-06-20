@@ -4,7 +4,7 @@
 
 ## 기능
 
-- DEV Community, Hacker News, GitHub Trending, Reddit에서 글 수집
+- DEV Community, Hacker News, GitHub Trending, Reddit, Hada News, PyTorch Blog에서 글 수집
 - skill 관련 키워드 필터링
 - 중복 제거
 - Discord 알림 전송
@@ -48,7 +48,8 @@ python main.py
 │   ├── hacker_news.py
 │   ├── github_trending.py
 │   ├── reddit.py
-│   └── hada_news.py
+│   ├── hada_news.py
+│   └── pytorch_blog.py
 ├── filters/             # 필터링 로직
 │   ├── __init__.py
 │   └── keyword_filter.py

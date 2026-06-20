@@ -10,7 +10,14 @@ from config import (
     SOURCES,
 )
 from database import Database
-from collectors import DevCommunityCollector, HackerNewsCollector, GitHubTrendingCollector, RedditCollector, HadaNewsCollector
+from collectors import (
+    DevCommunityCollector,
+    HackerNewsCollector,
+    GitHubTrendingCollector,
+    RedditCollector,
+    HadaNewsCollector,
+    PyTorchBlogCollector,
+)
 from filters import KeywordFilter, Deduplicator, TimeFilter
 from notifier import DiscordNotifier
 
@@ -62,6 +69,10 @@ class SkillCommunityBot:
         if SOURCES["hada_news"]["enabled"]:
             collectors.append(
                 HadaNewsCollector(SOURCES["hada_news"]["max_posts"])
+            )
+        if SOURCES["pytorch_blog"]["enabled"]:
+            collectors.append(
+                PyTorchBlogCollector(SOURCES["pytorch_blog"]["max_posts"])
             )
         return collectors
 
